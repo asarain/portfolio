@@ -1,0 +1,49 @@
+## Variables ##
+serial#=0
+ethaddr=00:00:00:00:00:00
+## IP addresses ##
+ipaddr=192.168.0.11
+serverip=192.168.0.1
+gatewayip=192.168.0.1
+netmask=255.255.255.0
+## NAND addresses ##
+uboot_nandaddress=0x20000
+ubootenv_nandaddress=0x60000
+kernel_nandaddress=0x080000
+kernel_nandsize=0x300000
+rfs_nandaddress=0x0380000
+rfs_nandsize=0x6400000
+## RAM addresses ##
+tmp_ramaddress=0x20000000
+kernel_ramaddress=0x23800000
+## Names ##
+hostname=PianomationII
+netdev=
+baudrate=115200
+bootdelay=1
+## setup stuff - needed? ##
+erase_kernel=nand erase ${kernel_nandaddress} ${kernel_nandsize}
+erase_rfs=nand erase ${rfs_nandaddress} ${rfs_nandsize}
+setup=echo Setup complete system ...; run cp_kernel; run cp_rfs; saveenv
+cp_kernel=echo Copy kernel via TFTP to JFFS2 ...; tftp ${tmp_ramaddress} uImage; run erase_kernel; nand write.jffs2 ${tmp_ramaddress} ${kernel_nandaddress} ${kernel_nandsize}
+cp_rfs=echo Copy NAND boot rfs via TFTP to JFFS2 ...; tftp ${tmp_ramaddress} rootfs.jffs2; run erase_rfs; nand write.jffs2 ${tmp_ramaddress} ${rfs_nandaddress} ${rfs_nandsize}
+## boot args ##
+nand_args=setenv bootargs mem=64M console=ttyS0,115200n8 root=/dev/mtdblock4 ro rootfstype=jffs2
+kernel2_args=setenv bootargs mem=64M console=ttyS0,115200n8 root=/dev/mtdblock5 rw rootfstype=jffs2
+nfs_args=setenv bootargs mem=64M console=ttyS0,115200n8 root=/dev/nfs ro nfsroot=${serverip}:/tftpboot/root ip=${ipaddr}:${serverip}:${gatewayip}:${netmask}:${hostname}:${netdev}:off
+nfs2_args=setenv bootargs mem=64M console=ttyS0,115200n8 root=/dev/nfs rw nfsroot=${serverip}:/tftpboot/root ip=${ipaddr}:${serverip}:${gatewayip}:${netmask}:${hostname}:${netdev}:off
+usb_args=setenv bootargs mem=64M console=ttyS0,115200n8 root=/dev/sda2 ro rootdelay=5
+## boot types ##
+nandboot=echo Booting from NAND ...; run nand_args; run load_kernel; bootm ${kernel_ramaddress}
+kernel2boot=echo Kernel 2.6 boot from NAND ...; run kernel2_args; run load_kernel; bootm ${kernel_ramaddress}
+dev2boot=echo Booting development system ...; run nfs2_args; tftp ${kernel_ramaddress} uImage; bootm
+devboot=echo Booting development system ...; run nfs_args; tftp ${kernel_ramaddress} uImage; bootm
+usbboot=echo Booting from USB drive ...; run usb_args; usb start;fatload usb 0 ${kernel_ramaddress} uImage;bootm
+## basic stuff ##
+load_kernel=nand read.jffs2 ${kernel_ramaddress} ${kernel_nandaddress} ${kernel_nandsize}
+bootcmd=run nandboot
+pm2_recovered=0
+pm2_update_recovery=0
+pm2_update_firmware=0
+pm2_firmware_updated=0
+pm2_kernel=3

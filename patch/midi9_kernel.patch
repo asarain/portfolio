@@ -1,0 +1,742 @@
+--- /arch/arm/mach-at91/at91sam9260_devices.c.orig	2013-03-22 14:26:33.000000000 -0700
++++ /arch/arm/mach-at91/at91sam9260_devices.c	2013-03-22 14:26:33.000000000 -0700
+@@ -450,9 +450,9 @@
+ #if defined(CONFIG_I2C_GPIO) || defined(CONFIG_I2C_GPIO_MODULE)
+ 
+ static struct i2c_gpio_platform_data pdata = {
+-	.sda_pin		= AT91_PIN_PA23,
++	.sda_pin		= AT91_PIN_PC10,
+ 	.sda_is_open_drain	= 1,
+-	.scl_pin		= AT91_PIN_PA24,
++	.scl_pin		= AT91_PIN_PC11,
+ 	.scl_is_open_drain	= 1,
+ 	.udelay			= 2,		/* ~100 kHz */
+ };
+@@ -465,11 +465,15 @@
+ 
+ void __init at91_add_device_i2c(struct i2c_board_info *devices, int nr_devices)
+ {
+-	at91_set_GPIO_periph(AT91_PIN_PA23, 1);		/* TWD (SDA) */
+-	at91_set_multi_drive(AT91_PIN_PA23, 1);
++	at91_set_GPIO_periph(AT91_PIN_PC10, 1);		/* TWD (SDA) */
++	at91_set_multi_drive(AT91_PIN_PC10, 1);
+ 
+-	at91_set_GPIO_periph(AT91_PIN_PA24, 1);		/* TWCK (SCL) */
+-	at91_set_multi_drive(AT91_PIN_PA24, 1);
++	at91_set_GPIO_periph(AT91_PIN_PC11, 1);		/* TWCK (SCL) */
++	at91_set_multi_drive(AT91_PIN_PC11, 1);
++
++	at91_set_GPIO_periph(AT91_PIN_PC12, 1);		/* I2C address select */
++	at91_set_multi_drive(AT91_PIN_PC12, 1);
++	at91_set_gpio_value(AT91_PIN_PC12, 1);    /* lo = 0x1a, hi= 0x1b */
+ 
+ 	i2c_register_board_info(0, devices, nr_devices);
+ 	platform_device_register(&at91sam9260_twi_device);
+@@ -558,10 +562,21 @@
+ 		.end	= AT91SAM9260_ID_SPI1,
+ 		.flags	= IORESOURCE_IRQ,
+ 	},
++	[2] = {
++		.start	= AT91SAM9260_SRAM0_BASE,
++		.end	= AT91SAM9260_SRAM0_BASE + AT91SAM9G20_SRAM0_SIZE - 1,
++		.flags	= IORESOURCE_MEM,
++	},
++	[3] = {
++		.start	= AT91SAM9260_SRAM1_BASE,
++		.end	= AT91SAM9260_SRAM1_BASE + AT91SAM9G20_SRAM1_SIZE - 1,
++		.flags	= IORESOURCE_MEM,
++	}
++
+ };
+ 
+ static struct platform_device at91sam9260_spi1_device = {
+-	.name		= "atmel_spi",
++	.name		= "snd_spi_pwm_midi",
+ 	.id		= 1,
+ 	.dev		= {
+ 				.dma_mask		= &spi_dmamask,
+@@ -866,6 +881,7 @@
+ 	at91_set_A_periph(AT91_PIN_PB15, 1);		/* DTXD */
+ }
+ 
++/* UART 1: MIDI ports */
+ static struct resource uart0_resources[] = {
+ 	[0] = {
+ 		.start	= AT91SAM9260_BASE_US0,
+@@ -917,6 +933,7 @@
+ 		at91_set_A_periph(AT91_PIN_PB25, 0);	/* RI0 */
+ }
+ 
++/* UART 2: Sensor Strip 6-pin */
+ static struct resource uart1_resources[] = {
+ 	[0] = {
+ 		.start	= AT91SAM9260_BASE_US1,
+@@ -952,7 +969,7 @@
+ static inline void configure_usart1_pins(unsigned pins)
+ {
+ 	at91_set_A_periph(AT91_PIN_PB6, 1);		/* TXD1 */
+-	at91_set_A_periph(AT91_PIN_PB7, 0);		/* RXD1 */
++	at91_set_A_periph(AT91_PIN_PB7, 1);		/* RXD1 */
+ 
+ 	if (pins & ATMEL_UART_RTS)
+ 		at91_set_A_periph(AT91_PIN_PB28, 0);	/* RTS1 */
+@@ -960,6 +977,7 @@
+ 		at91_set_A_periph(AT91_PIN_PB29, 0);	/* CTS1 */
+ }
+ 
++/* UART 3: Sensor Strip 10-pin */
+ static struct resource uart2_resources[] = {
+ 	[0] = {
+ 		.start	= AT91SAM9260_BASE_US2,
+@@ -995,7 +1013,7 @@
+ static inline void configure_usart2_pins(unsigned pins)
+ {
+ 	at91_set_A_periph(AT91_PIN_PB8, 1);		/* TXD2 */
+-	at91_set_A_periph(AT91_PIN_PB9, 0);		/* RXD2 */
++	at91_set_A_periph(AT91_PIN_PB9, 1);		/* RXD2 */
+ 
+ 	if (pins & ATMEL_UART_RTS)
+ 		at91_set_A_periph(AT91_PIN_PA4, 0);	/* RTS2 */
+@@ -1003,6 +1021,7 @@
+ 		at91_set_A_periph(AT91_PIN_PA5, 0);	/* CTS2 */
+ }
+ 
++/* UART 4: Ancho */
+ static struct resource uart3_resources[] = {
+ 	[0] = {
+ 		.start	= AT91SAM9260_BASE_US3,
+@@ -1038,7 +1057,7 @@
+ static inline void configure_usart3_pins(unsigned pins)
+ {
+ 	at91_set_A_periph(AT91_PIN_PB10, 1);		/* TXD3 */
+-	at91_set_A_periph(AT91_PIN_PB11, 0);		/* RXD3 */
++	at91_set_A_periph(AT91_PIN_PB11, 1);		/* RXD3 */
+ 
+ 	if (pins & ATMEL_UART_RTS)
+ 		at91_set_B_periph(AT91_PIN_PC8, 0);	/* RTS3 */
+@@ -1046,6 +1065,7 @@
+ 		at91_set_B_periph(AT91_PIN_PC10, 0);	/* CTS3 */
+ }
+ 
++/* UART 5: Tester */
+ static struct resource uart4_resources[] = {
+ 	[0] = {
+ 		.start	= AT91SAM9260_BASE_US4,
+@@ -1084,6 +1104,7 @@
+ 	at91_set_B_periph(AT91_PIN_PA30, 0);		/* RXD4 */
+ }
+ 
++/* UART 6: PPU (Peashooter) */
+ static struct resource uart5_resources[] = {
+ 	[0] = {
+ 		.start	= AT91SAM9260_BASE_US5,
+--- /arch/arm/mach-at91/board-sam9g20ek.c.orig	2013-03-22 14:26:33.000000000 -0700
++++ /arch/arm/mach-at91/board-sam9g20ek.c	2013-03-22 15:21:02.000000000 -0700
+@@ -69,6 +69,14 @@
+ 	/* DBGU on ttyS0. (Rx & Tx only) */
+ 	at91_register_uart(0, 0, 0);
+ 
++#if 1
++	at91_register_uart(AT91SAM9260_ID_US0, 1, 0);       // UART MIDI connector
++	at91_register_uart(AT91SAM9260_ID_US1, 2, 0);       // Sensor strip 6-pin
++	at91_register_uart(AT91SAM9260_ID_US2, 3, 0);       // Sensor strip 10-pin
++	at91_register_uart(AT91SAM9260_ID_US3, 4, 0);       // Ancho
++	at91_register_uart(AT91SAM9260_ID_US4, 5, 0);       // Tester
++	at91_register_uart(AT91SAM9260_ID_US5, 6, 0);       // Peashooter
++#else
+ 	/* USART0 on ttyS1. (Rx, Tx, CTS, RTS, DTR, DSR, DCD, RI) */
+ 	at91_register_uart(AT91SAM9260_ID_US0, 1, ATMEL_UART_CTS | ATMEL_UART_RTS
+ 			   | ATMEL_UART_DTR | ATMEL_UART_DSR | ATMEL_UART_DCD
+@@ -76,6 +84,7 @@
+ 
+ 	/* USART1 on ttyS2. (Rx, Tx, RTS, CTS) */
+ 	at91_register_uart(AT91SAM9260_ID_US1, 2, ATMEL_UART_CTS | ATMEL_UART_RTS);
++#endif
+ 
+ 	/* set serial console to ttyS0 (ie, DBGU) */
+ 	at91_set_serial_console(0);
+@@ -117,6 +126,13 @@
+ 	},
+ #endif
+ #endif
++	{	/* Solenoid */
++		.modalias	= "solenoid_dev",
++		.chip_select	= 0,
++		.max_speed_hz	= 100 * 1000 * 1000,
++		.bus_num	= 1,
++		.mode		= SPI_MODE_1,
++	}
+ };
+ 
+ 
+@@ -140,6 +156,7 @@
+  * NAND flash
+  */
+ static struct mtd_partition __initdata ek_nand_partition[] = {
++#if 0
+ 	{
+ 		.name   = "Bootstrap",
+ 		.offset = 0,
+@@ -155,6 +172,53 @@
+ 		.offset	= MTDPART_OFS_NXTBLK,
+ 		.size	= MTDPART_SIZ_FULL,
+ 	},
++#else
++	{
++		.name	= "Partition 0: AT91 Bootstrap",
++		.offset	= 0,                   /* 0x00000000 */
++		.size	= 128 * SZ_1K,           /* 0x00020000 */
++	},
++	{
++		.name	= "Partition 1: U-Boot",
++		.offset	= MTDPART_OFS_NXTBLK,  /* 0x00020000 */
++		.size	= 256 * SZ_1K,           /* 0x00040000 */
++	},
++	{
++		.name	= "Partition 2: uBoot vars",
++		.offset	= MTDPART_OFS_NXTBLK,  /* 0x00060000 */
++		.size	= 128 * SZ_1K,           /* 0x00020000 */
++	},
++	{
++		.name	= "Partition 3: Kernel",
++		.offset	= MTDPART_OFS_NXTBLK,  /* 0x00080000 */
++		.size	= 3 * SZ_1M,             /* 0x00300000 */
++	},
++	{
++		.name	= "Partition 4: RFS",
++		.offset	= MTDPART_OFS_NXTBLK,  /* 0x00380000 */
++		.size	= 100 * SZ_1M,           /* 0x06400000 */
++	},
++	{
++		.name	= "Partition 5: uBoot vars - Backup",
++		.offset	= MTDPART_OFS_NXTBLK,  /* 0x06780000 */
++		.size	= 128 * SZ_1K,           /* 0x00020000 */
++	},
++	{
++		.name	= "Partition 6: Kernel - Backup",
++		.offset	= MTDPART_OFS_NXTBLK,  /* 0x067A0000 */
++		.size	= 3 * SZ_1M,             /* 0x00300000 */
++	},
++	{
++		.name	= "Partition 7: Root File System - Backup",
++		.offset	= MTDPART_OFS_NXTBLK,  /* 0x06AA0000 */
++		.size	= 100 * SZ_1M,           /* 0x06400000 */
++	},
++	{
++		.name	= "Partition 8: Read-write Application Data",
++		.offset	= MTDPART_OFS_NXTBLK,  /* 0x0CEA0000 */
++		.size	= MTDPART_SIZ_FULL,	     /* Max: 0x10000000. size = 49 MB */
++	}
++#endif
+ };
+ 
+ static struct mtd_partition * __init nand_partitions(int size, int *num_partitions)
+@@ -243,16 +292,41 @@
+  * LEDs
+  */
+ static struct gpio_led ek_leds[] = {
+-	{	/* "bottom" led, green, userled1 to be defined */
+-		.name			= "ds5",
+-		.gpio			= AT91_PIN_PA6,
+-		.active_low		= 1,
+-		.default_trigger	= "none",
+-	},
+-	{	/* "power" led, yellow */
+-		.name			= "ds1",
+-		.gpio			= AT91_PIN_PA9,
+-		.default_trigger	= "heartbeat",
++	{
++		.name			 = "DS4:green:left",
++		.gpio			 = AT91_PIN_PB26,
++		.active_low		 = 1,
++		.default_trigger = "midi-activity",
++	},
++	{
++		.name			 = "DS5:green:center",
++		.gpio			 = AT91_PIN_PB28,
++		.active_low		 = 1,
++		.default_trigger = "timer",
++	},
++	{
++		.name			 = "DS6:green:right",
++		.gpio			 = AT91_PIN_PB27,
++		.active_low		 = 1,
++		.default_trigger = "timer",
++	},
++	//{
++	//	.name			 = "DS1:green:aux1",
++	//	.gpio			 = AT91_PIN_PC9,
++	//	.active_low		 = 0,
++	//	.default_trigger = "timer",
++	//},
++	{
++		.name			 = "DS2:green:aux2",
++		.gpio			 = AT91_PIN_PC4,
++		.active_low		 = 0,
++		.default_trigger = "timer",
++	},
++	{
++		.name			 = "DS3:green:aux3",
++		.gpio			 = AT91_PIN_PC8,
++		.active_low		 = 0,
++		.default_trigger = "timer",
+ 	}
+ };
+ 
+@@ -272,16 +346,23 @@
+ #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+ static struct gpio_keys_button ek_buttons[] = {
+ 	{
+-		.gpio		= AT91_PIN_PA30,
+-		.code		= BTN_3,
+-		.desc		= "Button 3",
++		.gpio		= AT91_PIN_PB23,
++		.code		= BTN_0,
++		.desc		= "Button 0",
++		.active_low	= 1,
++		.wakeup		= 1,
++	},
++	{
++		.gpio		= AT91_PIN_PB24,
++		.code		= BTN_1,
++		.desc		= "Button 1",
+ 		.active_low	= 1,
+ 		.wakeup		= 1,
+ 	},
+ 	{
+-		.gpio		= AT91_PIN_PA31,
+-		.code		= BTN_4,
+-		.desc		= "Button 4",
++		.gpio		= AT91_PIN_PB25,
++		.code		= BTN_2,
++		.desc		= "Button 2",
+ 		.active_low	= 1,
+ 		.wakeup		= 1,
+ 	}
+@@ -303,10 +384,12 @@
+ 
+ static void __init ek_add_device_buttons(void)
+ {
+-	at91_set_gpio_input(AT91_PIN_PA30, 1);	/* btn3 */
+-	at91_set_deglitch(AT91_PIN_PA30, 1);
+-	at91_set_gpio_input(AT91_PIN_PA31, 1);	/* btn4 */
+-	at91_set_deglitch(AT91_PIN_PA31, 1);
++	at91_set_gpio_input(AT91_PIN_PB23, 1);	/* btn0 */
++	at91_set_deglitch(AT91_PIN_PB23, 1);
++	at91_set_gpio_input(AT91_PIN_PB24, 0);	/* btn1 */
++	at91_set_deglitch(AT91_PIN_PB24, 1);
++	at91_set_gpio_input(AT91_PIN_PB25, 1);	/* btn2 */
++	at91_set_deglitch(AT91_PIN_PB25, 1);
+ 
+ 	platform_device_register(&ek_button_device);
+ }
+--- /drivers/usb/host/ohci.h.orig	2013-03-22 14:26:33.000000000 -0700
++++ /drivers/usb/host/ohci.h	2013-03-22 14:26:33.000000000 -0700
+@@ -685,7 +685,17 @@
+ 	ohci_to_hcd(ohci)->state = HC_STATE_HALT;
+ }
+ 
+-#define	FI			0x2edf		/* 12000 bits per frame (-1) */
++/* The AT91SAM91G20 master clock is 18.432 MHz.
++ * The USB clock is derived from the master.
++ * PLLB is set to divide by 10 and multiply by 52 yielding 95.846 Mhz
++ * USB "wants" a clock of 96Mhz. 95.846 MHz is an error of 0.16%.
++ * This error is acceptable for bit rate but not for frame interval
++ * Frame Interval tolerance is 0.05%.
++ * By changing the FI variable from 12000 to 11981 the frame interval 
++ *   error is now 0.0016% (plus osc error)
++ * 11981 = 18,432 * (52 / 10) / 8 
++ */
++#define	FI			0x2ecd		/* 11981 bits per frame */
+ #define	FSMP(fi)		(0x7fff & ((6 * ((fi) - 210)) / 7))
+ #define	FIT			(1 << 31)
+ #define LSTHRESH		0x628		/* lowspeed bit threshold */
+--- /drivers/usb/host/ohci-hcd.c.orig	2013-03-22 14:26:33.000000000 -0700
++++ /drivers/usb/host/ohci-hcd.c	2013-03-22 14:26:33.000000000 -0700
+@@ -549,6 +549,10 @@
+ 	if (ohci->num_ports == 0)
+ 		ohci->num_ports = roothub_a(ohci) & RH_A_NDP;
+ 
++  /* set USB frame interval */
++  if (ohci_readl (ohci, &ohci->regs->fminterval) != FI)
++    ohci_writel (ohci, FI, &ohci->regs->fminterval);
++
+ 	if (ohci->hcca)
+ 		return 0;
+ 
+@@ -580,6 +584,10 @@
+ 
+ 	disable (ohci);
+ 
++  /* set USB frame interval */
++  if (ohci_readl (ohci, &ohci->regs->fminterval) != FI)
++    ohci_writel (ohci, FI, &ohci->regs->fminterval);
++
+ 	/* boot firmware should have set this up (5.1.1.3.1) */
+ 	if (first) {
+ 
+--- /drivers/usb/gadget/gmidi.c.orig	2013-03-22 14:26:33.000000000 -0700
++++ /drivers/usb/gadget/gmidi.c	2013-03-22 14:26:33.000000000 -0700
+@@ -57,11 +57,14 @@
+ #define DRIVER_VERSION "25 Jul 2006"
+ 
+ static const char shortname[] = "g_midi";
+-static const char longname[] = "MIDI Gadget";
++static const char longname[] = "QRSPNO PNOmation II";
+ 
+ static int index = SNDRV_DEFAULT_IDX1;
+ static char *id = SNDRV_DEFAULT_STR1;
+ 
++/* MIDI9 hack to fix memory leak */
++static int queue_entries_pending = 0;
++
+ module_param(index, int, 0444);
+ MODULE_PARM_DESC(index, "Index value for the USB MIDI Gadget adapter.");
+ module_param(id, charp, 0444);
+@@ -158,7 +161,7 @@
+ 	dev_info(&(d)->gadget->dev , fmt , ## args)
+ 
+ 
+-static unsigned buflen = 256;
++static unsigned buflen = 64;
+ static unsigned qlen = 32;
+ 
+ module_param(buflen, uint, S_IRUGO);
+@@ -170,8 +173,8 @@
+  * DO NOT REUSE THESE IDs with a protocol-incompatible driver!!  Ever!!
+  * Instead:  allocate your own, using normal USB-IF procedures.
+  */
+-#define DRIVER_VENDOR_NUM	0x17b3		/* Grey Innovation */
+-#define DRIVER_PRODUCT_NUM	0x0004		/* Linux-USB "MIDI Gadget" */
++#define DRIVER_VENDOR_NUM	0x1E38		/* MIDI-QRS code */
++#define DRIVER_PRODUCT_NUM	0x0002		/* Linux-USB "MIDI Gadget" */
+ 
+ 
+ /*
+@@ -382,8 +385,8 @@
+ 	NULL,
+ };
+ 
+-static char manufacturer[50];
+-static char product_desc[40] = "MIDI Gadget";
++static char manufacturer[50] = "MIDI9/QRS";
++static char product_desc[40] = "QRSPNO PNOmation II";
+ static char serial_number[20];
+ 
+ /* static strings, in UTF-8 */
+@@ -1003,8 +1006,16 @@
+ 		}
+ 	}
+ 	if (req->length > 0) {
+-		usb_ep_queue(ep, req, GFP_ATOMIC);
+-	} else {
++    	/* MIDI9 hack to fix memory leak */
++		if (queue_entries_pending < 20) {
++    		usb_ep_queue(ep, req, GFP_ATOMIC);
++			queue_entries_pending++;
++		}
++		else {
++			free_ep_req(ep, req);
++		}
++ 	} else {
++		queue_entries_pending--;
+ 		free_ep_req(ep, req);
+ 	}
+ }
+--- /drivers/tty/serial/atmel_serial.c.orig	2013-03-22 14:26:33.000000000 -0700
++++ /drivers/tty/serial/atmel_serial.c	2013-03-22 14:26:33.000000000 -0700
+@@ -1115,7 +1115,23 @@
+ 					| ATMEL_US_NBSTOP | ATMEL_US_PAR
+ 					| ATMEL_US_USMODE);
+ 
+-	baud = uart_get_baud_rate(port, termios, old, 0, port->uartclk / 16);
++ /* FIXIT: This pretty hacky */
++	switch (port->line)
++	{
++	case 1: /* MIDI9_UART_FIVE_PIN_DIN */
++	case 4: /* MIDI9_UART_ANCHO */
++		baud = 31250; /* MIDI_BAUD_RATE */
++		break;
++	case 2: /* MIDI9_UART_PNOSCAN_6PIN */
++	case 3: /* MIDI9_UART_PNOSCAN_10PIN */
++	case 5: /* Test port */
++	case 6: /* MIDI9_UART_PEASHOOTER */
++		baud = (31250 * 4);
++		break;
++	default:
++		baud = uart_get_baud_rate(port, termios, old, 0, port->uartclk / 16);
++		break;
++	}
+ 	quot = uart_get_divisor(port, baud);
+ 
+ 	if (quot > 65535) {	/* BRGR is 16-bit, so switch to slower clock */
+--- /sound/soc/atmel/atmel_ssc_dai.c.orig	2013-03-22 14:26:33.000000000 -0700
++++ /sound/soc/atmel/atmel_ssc_dai.c	2013-03-22 14:26:33.000000000 -0700
+@@ -401,10 +401,10 @@
+ 	 */
+ 	if ((ssc_p->daifmt & SND_SOC_DAIFMT_FORMAT_MASK) == SND_SOC_DAIFMT_I2S
+ 		&& bits > 16) {
+-		printk(KERN_WARNING
+-				"atmel_ssc_dai: sample size %d "
+-				"is too large for I2S\n", bits);
+-		return -EINVAL;
++		//		printk(KERN_WARNING
++		//				"atmel_ssc_dai: sample size %d "
++		//				"is too large for I2S\n", bits);
++		//		return -EINVAL;
+ 	}
+ 
+ 	/*
+@@ -470,6 +470,7 @@
+ 				? SSC_START_FALLING_RF
+ 				: SSC_START_EDGE_RF);
+ 
++		start_event = SSC_START_TX_RX;              /* MIDI9: ADC settings */ 
+ 		rcmr =	  SSC_BF(RCMR_PERIOD, 0)
+ 			| SSC_BF(RCMR_STTDLY, START_DELAY)
+ 			| SSC_BF(RCMR_START, start_event)
+@@ -480,11 +481,12 @@
+ 		rfmr =	  SSC_BF(RFMR_FSEDGE, SSC_FSEDGE_POSITIVE)
+ 			| SSC_BF(RFMR_FSOS, SSC_FSOS_NONE)
+ 			| SSC_BF(RFMR_FSLEN, 0)
+-			| SSC_BF(RFMR_DATNB, 0)
++			| SSC_BF(RFMR_DATNB, (channels - 1))    /* MIDI9 */
+ 			| SSC_BIT(RFMR_MSBF)
+ 			| SSC_BF(RFMR_LOOP, 0)
+ 			| SSC_BF(RFMR_DATLEN, (bits - 1));
+ 
++		start_event = SSC_START_RISING_RF;          /* MIDI9: DAC settings */ 
+ 		tcmr =	  SSC_BF(TCMR_PERIOD, 0)
+ 			| SSC_BF(TCMR_STTDLY, START_DELAY)
+ 			| SSC_BF(TCMR_START, start_event)
+@@ -496,7 +498,7 @@
+ 			| SSC_BF(TFMR_FSDEN, 0)
+ 			| SSC_BF(TFMR_FSOS, SSC_FSOS_NONE)
+ 			| SSC_BF(TFMR_FSLEN, 0)
+-			| SSC_BF(TFMR_DATNB, 0)
++			| SSC_BF(TFMR_DATNB, (channels - 1))    /* MIDI9 */
+ 			| SSC_BIT(TFMR_MSBF)
+ 			| SSC_BF(TFMR_DATDEF, 0)
+ 			| SSC_BF(TFMR_DATLEN, (bits - 1));
+@@ -717,7 +719,7 @@
+ #define ATMEL_SSC_RATES (SNDRV_PCM_RATE_8000_96000)
+ 
+ #define ATMEL_SSC_FORMATS (SNDRV_PCM_FMTBIT_S8     | SNDRV_PCM_FMTBIT_S16_LE |\
+-			  SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S32_LE)
++			  SNDRV_PCM_FMTBIT_S24_LE)
+ 
+ static struct snd_soc_dai_ops atmel_ssc_dai_ops = {
+ 	.startup	= atmel_ssc_startup,
+@@ -737,7 +739,7 @@
+ 		.resume = atmel_ssc_resume,
+ 		.playback = {
+ 			.channels_min = 1,
+-			.channels_max = 2,
++			.channels_max = 6,
+ 			.rates = ATMEL_SSC_RATES,
+ 			.formats = ATMEL_SSC_FORMATS,},
+ 		.capture = {
+--- /sound/soc/codecs/wm8580.h.orig	2011-12-21 13:00:46.000000000 -0800
++++ /sound/soc/codecs/wm8580.h	2013-06-04 15:10:48.000000000 -0700
+@@ -20,6 +20,9 @@
+ 
+ #define WM8580_MCLK       1
+ #define WM8580_CLKOUTSRC  2
++#define WM8580_DAC_CLKSEL 3
++#define WM8580_ADC_CLKSEL 4
++
+ 
+ #define WM8580_CLKSRC_MCLK    1
+ #define WM8580_CLKSRC_PLLA    2
+--- /sound/soc/codecs/wm8580.c.orig	2011-12-21 13:00:46.000000000 -0800
++++ /sound/soc/codecs/wm8580.c	2013-10-17 09:30:50.000000000 -0700
+@@ -37,6 +37,8 @@
+ 
+ #include "wm8580.h"
+ 
++#define MIDI9 1
++
+ /* WM8580 register space */
+ #define WM8580_PLLA1                         0x00
+ #define WM8580_PLLA2                         0x01
+@@ -111,6 +113,14 @@
+ #define WM8580_CLKSEL_DAC_CLKSEL_PLLA 0x01
+ #define WM8580_CLKSEL_DAC_CLKSEL_PLLB 0x02
+ 
++#ifdef MIDI9
++#define WM8580_CLKSEL_ADC_CLKSEL_MASK     0x0c
++#define WM8580_CLKSEL_ADC_CLKSEL_ADCMCLK  0x00
++#define WM8580_CLKSEL_ADC_CLKSEL_PLLA     0x04
++#define WM8580_CLKSEL_ADC_CLKSEL_PLLB     0x08
++#define WM8580_CLKSEL_ADC_CLKSEL_MCLK     0x0c
++#endif
++
+ /* AIF control 1 (registers 9h-bh) */
+ #define WM8580_AIF_RATE_MASK       0x7
+ #define WM8580_AIF_BCLKSEL_MASK   0x18
+@@ -197,6 +207,19 @@
+ 
+ static const DECLARE_TLV_DB_SCALE(dac_tlv, -12750, 50, 1);
+ 
++#ifdef MIDI9
++/*----------------------------------------------------------------------------*\
++ * exported functions - set sample rate, very hacky
++\*----------------------------------------------------------------------------*/
++#define DEFAULT_SAMPLE_RATE 44100
++static int g_sample_rate;
++void midi9_set_codec_sample_rate(int sample_rate)
++{
++  g_sample_rate = sample_rate;
++}
++EXPORT_SYMBOL(midi9_set_codec_sample_rate);
++#endif
++
+ static int wm8580_out_vu(struct snd_kcontrol *kcontrol,
+ 			 struct snd_ctl_elem_value *ucontrol)
+ {
+@@ -349,9 +372,20 @@
+ 	/* Scale the output frequency up; the PLL should run in the
+ 	 * region of 90-100MHz.
+ 	 */
++
++#ifdef MIDI9
++	/*  MIDI9
++	 *  Allow frequencies outside of the range suggested by the Wolfson. 
++	 *  Seems to work.
++	 *  This is a hard limitation we can't work around
++	 */
++	for (i = ARRAY_SIZE(post_table);i > 0; ) {
++		if (target * post_table[--i].div <= 101000100) {
++#else
+ 	for (i = 0; i < ARRAY_SIZE(post_table); i++) {
+ 		if (target * post_table[i].div >=  90000000 &&
+ 		    target * post_table[i].div <= 100000000) {
++#endif
+ 			pll_div->freqmode = post_table[i].freqmode;
+ 			pll_div->postscale = post_table[i].postscale;
+ 			target *= post_table[i].div;
+@@ -359,7 +393,11 @@
+ 		}
+ 	}
+ 
++#ifdef MIDI9
++	if (target == 0) {
++#else
+ 	if (i == ARRAY_SIZE(post_table)) {
++#endif
+ 		printk(KERN_ERR "wm8580: Unable to scale output frequency "
+ 		       "%u\n", target);
+ 		return -EINVAL;
+@@ -506,13 +544,21 @@
+ 	}
+ 
+ 	/* Look up the SYSCLK ratio; accept only exact matches */
++#ifdef MIDI9
++	ratio = wm8580->sysclk[dai->driver->id] / g_sample_rate;
++#else
+ 	ratio = wm8580->sysclk[dai->driver->id] / params_rate(params);
++#endif
+ 	for (i = 0; i < ARRAY_SIZE(wm8580_sysclk_ratios); i++)
+ 		if (ratio == wm8580_sysclk_ratios[i])
+ 			break;
+ 	if (i == ARRAY_SIZE(wm8580_sysclk_ratios)) {
+ 		dev_err(codec->dev, "Invalid clock ratio %d/%d\n",
++#ifdef MIDI9
++			wm8580->sysclk[dai->driver->id], g_sample_rate);
++#else
+ 			wm8580->sysclk[dai->driver->id], params_rate(params));
++#endif
+ 		return -EINVAL;
+ 	}
+ 	paifa |= i;
+@@ -682,6 +728,56 @@
+ 		}
+ 		snd_soc_write(codec, WM8580_PLLB4, reg);
+ 		break;
++#ifdef MIDI9
++	case WM8580_DAC_CLKSEL:
++		reg = snd_soc_read(codec, WM8580_CLKSEL);
++		reg &= ~WM8580_CLKSEL_DAC_CLKSEL_MASK;
++
++		switch (div) {
++		case WM8580_CLKSRC_MCLK:
++			break;
++
++		case WM8580_CLKSRC_PLLA:
++			reg |= WM8580_CLKSEL_DAC_CLKSEL_PLLA;
++			break;
++
++		case WM8580_CLKSRC_PLLB:
++			reg |= WM8580_CLKSEL_DAC_CLKSEL_PLLB;
++			break;
++
++		default:
++			return -EINVAL;
++		}
++		snd_soc_write(codec, WM8580_CLKSEL, reg);
++		break;
++
++	case WM8580_ADC_CLKSEL:
++		reg = snd_soc_read(codec, WM8580_CLKSEL);
++		reg &= ~WM8580_CLKSEL_ADC_CLKSEL_MASK;
++
++		switch (div) {
++		case WM8580_CLKSRC_ADCMCLK:
++      		reg |= WM8580_CLKSEL_ADC_CLKSEL_ADCMCLK;
++			break;
++
++		case WM8580_CLKSRC_MCLK:
++			reg |= WM8580_CLKSEL_ADC_CLKSEL_MCLK;
++			break;
++
++		case WM8580_CLKSRC_PLLA:
++			reg |= WM8580_CLKSEL_ADC_CLKSEL_PLLA;
++			break;
++
++		case WM8580_CLKSRC_PLLB:
++			reg |= WM8580_CLKSEL_ADC_CLKSEL_PLLB;
++			break;
++
++		default:
++			return -EINVAL;
++		}
++		snd_soc_write(codec, WM8580_CLKSEL, reg);
++		break;
++#endif
+ 
+ 	default:
+ 		return -EINVAL;
+@@ -863,6 +959,9 @@
+ 		goto err_regulator_get;
+ 	}
+ 
++#ifdef MIDI9
++	g_sample_rate = DEFAULT_SAMPLE_RATE;
++#endif
+ 	/* Get the codec into a known state */
+ 	ret = snd_soc_write(codec, WM8580_RESET, 0);
+ 	if (ret != 0) {
+--- /sound/soc/atmel/atmel-pcm.c.orig	2011-12-21 13:00:46.000000000 -0800
++++ /sound/soc/atmel/atmel-pcm.c	2013-06-05 14:09:50.000000000 -0700
+@@ -367,7 +367,7 @@
+ static int atmel_pcm_new(struct snd_soc_pcm_runtime *rtd)
+ {
+ 	struct snd_card *card = rtd->card->snd_card;
+-	struct snd_soc_dai *dai = rtd->cpu_dai;
++	struct snd_soc_dai *dai = rtd->codec_dai;
+ 	struct snd_pcm *pcm = rtd->pcm;
+ 	int ret = 0;
+ 
+--- /drivers/mmc/host/at91_mci.c.orig	2011-12-21 13:00:46.000000000 -0800
++++ /drivers/mmc/host/at91_mci.c	2013-06-07 13:30:44.000000000 -0700
+@@ -667,7 +667,9 @@
+ 				}
+ 			} else {
+ 				if (status & AT91_MCI_RTOE)
+-					cmd->error = -ETIMEDOUT;
++				{
++					//cmd->error = -ETIMEDOUT;  //FIXIT!: MIDI9, this caused some SD-cards to fail. This is a dangerous HACK.
++				}
+ 				else if (status & AT91_MCI_RCRCE)
+ 					cmd->error = -EILSEQ;
+ 				else
